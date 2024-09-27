@@ -23,6 +23,7 @@ for col in cat_cols:
 from sklearn.model_selection import train_test_split
 X = df.drop('Class', axis=1)
 y = df['Class']
+print(y.value_counts())
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 #implementing 4 models: Decision Trees,K-Nearest Neighbors, Perceptron, Logistic Regression

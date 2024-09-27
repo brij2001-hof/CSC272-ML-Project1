@@ -14,31 +14,49 @@ print("Running dataset1")
 
 
 # Load the data
-df = pd.read_csv('weather.csv')
-df = df.dropna()
-#print(df.head())
-df.columns = df.columns.str.replace("'", "") #there were apostrophes in the column names
-#encode categorical data
-from sklearn.preprocessing import LabelEncoder
-le = LabelEncoder()
+df = pd.read_csv('water_potability.csv')
+print(df.head())
+df.dropna(inplace=True)
+#feature importance
+# Feature importance
+from sklearn.ensemble import RandomForestClassifier
+import matplotlib.pyplot as plt
 
-#all categorical columns
-cat_cols = [col for col in df.columns if df[col].dtype == 'object']
+# Prepare the data
+X = df.drop('Potability', axis=1)
+y = df['Potability']
+print(y.value_counts())
 
-#apply label encoder to categorical columns
-for col in cat_cols:
-    df[col] = le.fit_transform(df[col])
+## Create and fit the random forest classifier
+# rf_classifier = RandomForestClassifier(n_estimators=100, random_state=42)
+# rf_classifier.fit(X, y)
+
+# # Get feature importances
+# importances = rf_classifier.feature_importances_
+# feature_importances = pd.Series(importances, index=X.columns).sort_values(ascending=False)
+
+# # Plot feature importances
+# plt.figure(figsize=(10, 6))
+# feature_importances.plot(kind='bar')
+# plt.title('Feature Importances')
+# plt.xlabel('Features')
+# plt.ylabel('Importance')
+# plt.tight_layout()
+# plt.show()
+
+# # Print feature importances
+# print("Feature Importances:")
+# for feature, importance in feature_importances.items():
+#     print(f"{feature}: {importance:.4f}")
+
 
 #split the data into train test split
 from sklearn.model_selection import train_test_split
-X = df.drop('RainTomorrow', axis=1)
-y = df['RainTomorrow']
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=42)
 
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-
-# Scaling
 scaler = StandardScaler()
+
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
 
@@ -57,14 +75,14 @@ def train_and_evaluate_models(X_train, X_test, y_train, y_test):
         y_pred = model.predict(X_test)
 
         #F1 score
-        from sklearn.metrics import f1_score
-        f1 = f1_score(y_test, y_pred, average='weighted')
-        print(f"{name} F1 Score: {f1:.4f}")
+        from sklearn.metrics import accuracy_score,classification_report
+        f1 = accuracy_score(y_test, y_pred)
+        print(f"{name} Accuracy: {f1:.4f}")
+        print(classification_report(y_test, y_pred))
         
         # learning curve
         train_sizes, train_scores, test_scores = learning_curve(
-            model, X_train, y_train, cv=5, n_jobs=-1, 
-            train_sizes=np.linspace(0.1, 1.0, 100))
+             model, X_train, y_train, cv=5, n_jobs=-1)
         
         train_mean = np.mean(train_scores, axis=1)
         train_std = np.std(train_scores, axis=1)
@@ -117,17 +135,17 @@ def evaluate_parameters(X_train, X_test, y_train, y_test):
         },
         'Logistic Regression': {
             'pipeline': Pipeline([
-                ('clf', LogisticRegression(max_iter=1000))
+                ('clf', LogisticRegression())
             ]),
             'params': {
                 'clf__C': np.logspace(-4, 4, 20),
                 'clf__solver': ['lbfgs', 'liblinear', 'newton-cg', 'newton-cholesky', 'sag', 'saga'],
-                'clf__max_iter': [1000, 2000, 3000]
+                'clf__max_iter': range(50,1500,50)
             }
         },
         'Perceptron': {
             'pipeline': Pipeline([
-                ('clf', Perceptron(max_iter=1000, tol=1e-3))
+                ('clf', Perceptron())
             ]),
             'params': {
                 'clf__alpha': np.logspace(-5, 0, 20),
@@ -186,6 +204,8 @@ def evaluate_parameters(X_train, X_test, y_train, y_test):
     plt.tight_layout()
     plt.show()
 
-evaluate_parameters(X_train, X_test, y_train, y_test)
+
+#evaluate_parameters(X_train, X_test, y_train, y_test)
+train_and_evaluate_models(X_train, X_test, y_train, y_test)
 #train_and_evaluate_models(X_train, X_test, y_train, y_test)
 
