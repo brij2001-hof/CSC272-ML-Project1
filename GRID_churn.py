@@ -29,36 +29,35 @@ X_test = scaler.transform(X_test)
 
 # Define the models and their hyperparameters for GridSearchCV
 models = {
-    'Decision Tree': {
-        'model': DecisionTreeClassifier(),
-        'params': {
-            'max_depth': range(1, 20),
-            'min_samples_split': range(2, 11),
-            'min_samples_leaf': range(1, 11)
-        }
-    },
-    'K-Nearest Neighbors': {
-        'model': KNeighborsClassifier(),
-        'params': {
-            'n_neighbors': range(1, 20),
-            'weights': ['uniform', 'distance'],
-            'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']
-        }
-    },
-    'Logistic Regression': {
-        'model': LogisticRegression(max_iter=1000),
-        'params': {
-            'C': np.logspace(-4, 4, 20),
-            'solver': ['lbfgs', 'liblinear', 'newton-cg', 'newton-cholesky', 'sag', 'saga']
-        }
-    },
+    # 'Decision Tree': {
+    #     'model': DecisionTreeClassifier(),
+    #     'params': {
+    #         'max_depth': range(1, 20),
+    #         'min_samples_split': range(2, 11),
+    #         'min_samples_leaf': range(1, 11)
+    #     }
+    # },
+    # 'K-Nearest Neighbors': {
+    #     'model': KNeighborsClassifier(),
+    #     'params': {
+    #         'n_neighbors': range(1, 20),
+    #         'weights': ['uniform', 'distance'],
+    #         'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']
+    #     }
+    # },
+    # 'Logistic Regression': {
+    #     'model': LogisticRegression(max_iter=1000),
+    #     'params': {
+    #         'C': np.logspace(-4, 4, 20),
+    #         'solver': ['lbfgs', 'liblinear', 'newton-cg', 'newton-cholesky', 'sag', 'saga']
+    #     }
+    # },
     'Perceptron': {
-        'model': Perceptron(max_iter=1000, tol=1e-3),
+        'model': Perceptron(max_iter=1000, tol=1e-3,eta0=0.1),
         'params': {
-            'alpha': np.logspace(-5, 0, 20),
-            'eta0': [0.1, 0.5, 1.0],
-            'penalty': ['l2', 'l1', 'elasticnet']
-        }
+                'class_weight': ['balanced']+[{0:1.0-x, 1:x} for x in np.linspace(0.0,1,10)],
+                'penalty': ['l1', 'l2', 'elasticnet'],
+            }
     }
 }
 
@@ -66,7 +65,7 @@ models = {
 best_params = {}
 scores = {}
 for name, config in models.items():
-    grid_search = GridSearchCV(config['model'], config['params'], cv=5, scoring='f1_weighted', n_jobs=-1)
+    grid_search = GridSearchCV(config['model'], config['params'], cv=5, scoring='f1_weighted', n_jobs=-1,verbose=2)
     grid_search.fit(X_train, y_train)
     best_params[name] = grid_search.best_params_
     scores[name] = grid_search.best_score_

@@ -92,7 +92,7 @@ print(y.value_counts())
 #split the data into train test split
 from sklearn.model_selection import train_test_split
 # knn = KNeighborsClassifier()
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42,stratify=y)
 # from sklearn.model_selection import KFold
 # scores=[]
 # kFold=KFold(n_splits=10,random_state=42,shuffle=True)
@@ -106,18 +106,20 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 
 # print(scores)
 # exit
-
-# scaler = StandardScaler()
-# X_train = scaler.fit_transform(X_train)
-# X_test = scaler.transform(X_test)
+from sklearn.preprocessing import RobustScaler
+scaler = StandardScaler()
 #one hot encoding
 from sklearn.preprocessing import OneHotEncoder
-ohe = OneHotEncoder()
+ohe = OneHotEncoder(sparse_output=False)
 b = X_train
-X_train = pd.get_dummies(X_train,columns=cat_cols)
-print(X_train.info())
-print(b.head())
-X_test = pd.get_dummies(X_test,columns=cat_cols)
+X_train = ohe.fit_transform(X_train)
+# X_train = pd.get_dummies(X_train,columns=cat_cols)
+# print(X_train.head())
+X_train = scaler.fit_transform(X_train)
+#print(X_train.info())
+#print(b.head())
+#X_test = pd.get_dummies(X_test,columns=cat_cols)
+X_test = ohe.transform(X_test)
 
 def train_and_evaluate_models(X_train, X_test, y_train, y_test):
     models = {
@@ -163,12 +165,11 @@ def train_and_evaluate_models(X_train, X_test, y_train, y_test):
     return plt
 
 def evaluate_parameters(X_train, X_test, y_train, y_test):
-    from sklearn.model_selection import KFold, cross_val_score
-    from sklearn.model_selection import validation_curve
+    from sklearn.model_selection import KFold, validation_curve
+    from sklearn.pipeline import Pipeline
     import numpy as np
     import matplotlib.pyplot as plt
-    from sklearn.pipeline import Pipeline
-    from sklearn.preprocessing import StandardScaler
+    import plots_to_pdf
 
     models = {
         'Decision Tree': {
@@ -198,31 +199,29 @@ def evaluate_parameters(X_train, X_test, y_train, y_test):
             ]),
             'params': {
                  'clf__class_weight': ['balanced']+[{0:1.0-x, 1:x} for x in np.linspace(0.0,1,10)],
-
+                 'clf__max_iter': [100,200,300,400,500,600,700,800,900,1000,1100],
+                 'clf__solver': ['lbfgs', 'liblinear', 'newton-cg', 'newton-cholesky', 'sag', 'saga'],
+                 'clf__C': np.linspace(0.0001,1,100),
+                 'clf__tol': np.linspace(0.00001,0.001,100),
             }
         },
         'Perceptron': {
             'pipeline': Pipeline([
-                ('clf', Perceptron())
+                ('clf', Perceptron(max_iter=1000))
             ]),
             'params': {
                 'clf__class_weight': ['balanced']+[{0:1.0-x, 1:x} for x in np.linspace(0.0,1,10)],
-                'clf__max_iter': [100,200,300,400,500,600,700,800,900,1000,1100],
+                'clf__tol' : np.linspace(0.0001,0.01,100),
+                'clf__alpha' : np.linspace(0.00001,0.01,100),
+                'clf__eta0' : np.linspace(0.00001,1,100),
             }
         }
     }
 
-    kfold = KFold(n_splits=5, shuffle=True, random_state=42)
-    # Calculate the total number of subplots
-    total_plots = sum(len(config['params']) for config in models.values())
-    rows = int(np.ceil(np.sqrt(total_plots)))
-    cols = int(np.ceil(total_plots / rows))
-
-    # Create a single figure for all plots
-    fig, axes = plt.subplots(rows, cols, figsize=(5*cols, 5*rows))
-    axes = axes.flatten()  # Flatten the 2D array of axes for easier indexing
-
-    plot_index = 0
+    from sklearn.model_selection import StratifiedKFold
+    Skfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    figures = []  # List to store individual figures
+    t=[]
     for name, config in models.items():
         pipeline = config['pipeline']
         params = config['params']
@@ -230,49 +229,102 @@ def evaluate_parameters(X_train, X_test, y_train, y_test):
         for param_name, param_range in params.items():
             train_scores, test_scores = validation_curve(
                 pipeline, X_train, y_train, param_name=param_name, param_range=param_range,
-                cv=kfold, scoring="f1_weighted", n_jobs=-1
+                cv=Skfold, scoring="f1_weighted", n_jobs=-1
             )
             
             train_mean = np.mean(train_scores, axis=1)
             train_std = np.std(train_scores, axis=1)
             test_mean = np.mean(test_scores, axis=1)
             test_std = np.std(test_scores, axis=1)
-            ax = axes[plot_index]
+            highest_test_score = np.max(test_mean)
+            #get param value that corresponds to the highest test score
+            highest_test_score_index = np.argmax(test_mean)
+            highest_test_score_value = param_range[highest_test_score_index]
+            t.append(f"{name} - {param_name}: {highest_test_score_value} - {highest_test_score:.4f}")
+            #get param value that corresponds to the highest test score
+            highest_test_score_index = np.argmax(test_mean)
+            highest_test_score_value = param_range[highest_test_score_index]
+            pipeline.set_params(**{param_name: highest_test_score_value})
+            pipeline.fit(X_train,y_train)
+            y_pred = pipeline.predict(X_test)
+            from sklearn.metrics import f1_score
+            f1 = f1_score(y_test, y_pred, average='weighted')
+            print(f"{name} - {param_name}: {highest_test_score_value} - {highest_test_score:.4f} - {f1:.4f}")
+            print(f"{name} - {param_name}: {highest_test_score_value} - {highest_test_score:.4f}")
+            
+            fig,ax=plt.subplots(figsize=(10, 6))
+            if param_name == 'clf__penalty' or param_name == 'clf__solver':
+                #bar chart
+                ax.bar(param_range, test_mean, alpha=0.5, color='blue')
+                ax.set_title(f"{name} - {param_name.replace('clf__', '').replace('_', ' ').title()}")
+                ax.set_xlabel(param_name.replace('clf__', '').replace('_', ' ').title())
+                ax.set_ylabel("F1 Weighted Score")
+                ax.set_ylim(min(min(test_mean),min(train_mean))-0.08,max(max(test_mean),max(train_mean))+0.03)
+                ax.grid(True)
+                ax.annotate(f"Highest Test Score: {highest_test_score:.4f}, value: {highest_test_score_value}", xy=(0.05, 0.95), xycoords='axes fraction', ha='left', va='top', color="red")
+                figures.append(fig)  # Add the figure to the list
+                continue
             if param_name == 'clf__class_weight':
-                temp=[];c=0
-                for i in range(len(param_range)):
-                    print(len(param_range))
-                    print(i)
-                    print("ssss")
-                    if param_range[i] == 'balanced':
-                        temp.append("{i}".format(i=param_range[i]))
+                temp = []
+                for pw in param_range:
+                    if pw == 'balanced':
+                        temp.append(str(pw))
                     else:
-                        temp.append("{i:.2f},{j:.2f}".format(i=param_range[i][0],j=param_range[i][1]))
-                param_range=temp
-                param_name='class_weight class0,class1'
-            ax.set_title(f"{name} - {param_name}")
-            ax.set_xlabel(param_name)
-            ax.set_ylabel("F1 weighted")
-            ax.set_ylim(0.0, 1.1)
+                        # Format as fraction
+                        temp.append(r'$\frac{{{0:.2f}}}{{{1:.2f}}}$'.format(pw[0], pw[1]))
+                param_labels = temp
+                ax.set_title(f"{name} - Class Weight")
+                ax.set_xlabel('Class Weight Class0,Class1')
+                try:
+                    highest_test_score_value = f"0:{highest_test_score_value[0]:.2f} , 1:{highest_test_score_value[1]:.2f}"
+                except:
+                    highest_test_score_value = str(highest_test_score_value)
+            else:
+                param_labels = param_range
+                ax.set_title(f"{name} - {param_name.replace('clf__', '').replace('_', ' ').title()}")
+                ax.set_xlabel(param_name.replace('clf__', '').replace('_', ' ').title())
+                try:
+                    #3 significant digits
+                    if highest_test_score_value.round(3) == 0.000:
+                        highest_test_score_value = f'{highest_test_score_value:.5f}'
+                    else:
+                        highest_test_score_value = f"{highest_test_score_value.round(3)}"
+
+                except:
+                    highest_test_score_value = str(highest_test_score_value)
+            ax.set_ylabel("F1 Weighted Score")
+            ax.set_ylim(min(min(test_mean),min(train_mean))-0.1,max(max(test_mean),max(train_mean))+0.1)
             lw = 2
-            ax.plot(param_range, train_mean, label="Training score", color="darkorange", lw=lw)
-            ax.fill_between(param_range, train_mean - train_std, train_mean + train_std, alpha=0.2, color="darkorange", lw=lw)
-            ax.plot(param_range, test_mean, label="Cross-validation score", color="navy", lw=lw)
-            ax.fill_between(param_range, test_mean - test_std, test_mean + test_std, alpha=0.2, color="navy", lw=lw)
+            ax.plot(param_labels, train_mean, label="Training score", color="darkorange", lw=lw)
+            ax.fill_between(param_labels, train_mean - train_std, train_mean + train_std, alpha=0.2, color="darkorange", lw=lw)
+            ax.plot(param_labels, test_mean, label="Cross-validation score", color="navy", lw=lw)
+            ax.fill_between(param_labels, test_mean - test_std, test_mean + test_std, alpha=0.2, color="navy", lw=lw)
             ax.legend(loc="best")
             ax.grid(True)
-            
-            plot_index += 1
+            ax.annotate(f"Highest Test Score: {highest_test_score:.4f}, value: {highest_test_score_value}", xy=(0.05, 0.95), xycoords='axes fraction', ha='left', va='top', color="red")            
+            figures.append(fig)  # Add the figure to the list
+            #plot confusion matrix
+            from sklearn.metrics import confusion_matrix
+            cm = confusion_matrix(y_test, y_pred)
+            fig,ax=plt.subplots(figsize=(10, 6))
+            import seaborn as sns
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+            plt.title(f"{name} - Confusion Matrix")
+            plt.xlabel("Predicted")
+            plt.ylabel("True")
+            figures.append(fig)
+            from scikitplot.classifiers import plot_precision_recall_curve_with_cv
+            fig,ax=plt.subplots(figsize=(10, 6))
+            try:
+                plot_precision_recall_curve_with_cv(do_cv=False,clf=pipeline, X=X_test, y=y_test, ax=ax)
+                figures.append(fig)            
+            except:
+                print(f"Error in {name} - Precision-Recall Curve")
+    # Save all figures to a single PDF, one plot per row (page)
+    plots_to_pdf.to_pdf(figures, filename='employee.pdf')
+    print(t)
+    #plt.show()
 
-    # Remove any unused subplots
-    for i in range(plot_index, len(axes)):
-        fig.delaxes(axes[i])
-
-    #plt.tight_layout()
-   # plt.show()
-    ScrollableWindow(fig)
-for i in np.logspace(-4, 0, 20):
-    print(i)
 #train_and_evaluate_models(X_train, X_test, y_train, y_test)
 #train_and_evaluate_models(X_train, X_test, y_train, y_test)
 # Get feature importances
@@ -280,7 +332,7 @@ from sklearn.ensemble import RandomForestClassifier
 rf_classifier = RandomForestClassifier(n_estimators=100, random_state=42)
 rf_classifier.fit(X_train, y_train)
 importances = rf_classifier.feature_importances_
-feature_importances = pd.Series(importances, index=X_train.columns).sort_values(ascending=False)
+#feature_importances = pd.Series(importances, index=X_train.columns).sort_values(ascending=False)
 
 # # Plot feature importances
 # plt.figure(figsize=(10, 6))

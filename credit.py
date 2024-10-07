@@ -1,5 +1,18 @@
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split,KFold
+from sklearn.metrics import accuracy_score,f1_score,roc_auc_score,roc_curve,auc
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import validation_curve
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import Perceptron
+
+
+import pandas as pd
+import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import Perceptron
@@ -7,40 +20,139 @@ from sklearn.linear_model import LogisticRegression
 import matplotlib
 import matplotlib.pyplot as plt
 matplotlib.use('TkAgg')
+from PyQt5 import QtWidgets
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+
+
+class ScrollableWindow(QtWidgets.QMainWindow):
+    def __init__(self, fig):
+        self.qapp = QtWidgets.QApplication([])
+
+        QtWidgets.QMainWindow.__init__(self)
+        self.widget = QtWidgets.QWidget()
+        self.setCentralWidget(self.widget)
+        self.widget.setLayout(QtWidgets.QVBoxLayout())
+        self.widget.layout().setContentsMargins(0,0,0,0)
+        self.widget.layout().setSpacing(0)
+
+        self.fig = fig
+        self.canvas = FigureCanvas(self.fig)
+        self.canvas.draw()
+        self.scroll = QtWidgets.QScrollArea(self.widget)
+        self.scroll.setWidget(self.canvas)
+
+        self.nav = NavigationToolbar(self.canvas, self.widget)
+        self.widget.layout().addWidget(self.nav)
+        self.widget.layout().addWidget(self.scroll)
+
+        self.show()
+        exit(self.qapp.exec_())
 from sklearn.model_selection import learning_curve
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import KFold, validation_curve
-from sklearn.pipeline import Pipeline
-import numpy as np
-import matplotlib.pyplot as plt
-import plots_to_pdf
-import seaborn as sns
 
+print("Running dataset1")
+
+
+# Load the data
+df = pd.read_csv('credit.csv')
+
+df.columns = df.columns.str.replace("'", "") 
+print(df.columns)
+df.drop(['id'],axis=1,inplace=True)
+df.dropna(inplace=True)
+print(df.head())
+#feature importance
+# Feature importance
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import LabelEncoder
+le = LabelEncoder()
+
+#all categorical columns
+cat_cols = [col for col in df.columns if df[col].dtype == 'object']
+
+#apply label encoder to categorical columns
+# for col in cat_cols:
+#     df[col] = le.fit_transform(df[col])
+# Prepare the data
+#drop duplicates
+
+X = df.drop('class', axis=1)
+print(X.columns)
+scaler = StandardScaler()
+#X = scaler.fit_transform(X)
+#X_test = scaler.transform(X)
+y = df['class']
+print(y.value_counts())
+
+## Create and fit the random forest classifier
+# rf_classifier = RandomForestClassifier(n_estimators=100, random_state=42)
+# rf_classifier.fit(X, y)
+
+# # Get feature importances
+# importances = rf_classifier.feature_importances_
+# feature_importances = pd.Series(importances, index=X.columns).sort_values(ascending=False)
+
+# # Plot feature importances
+# plt.figure(figsize=(10, 6))
+# feature_importances.plot(kind='bar')
+# plt.title('Feature Importances')
+# plt.xlabel('Features')
+# plt.ylabel('Importance')
+# plt.tight_layout()
+# plt.show()
+
+# # Print feature importances
+# print("Feature Importances:")
+# for feature, importance in feature_importances.items():
+#     print(f"{feature}: {importance:.4f}")
+
+
+#split the data into train test split
+from sklearn.model_selection import train_test_split
+# knn = KNeighborsClassifier()
+X = pd.get_dummies(X,columns=[c for c in cat_cols if c != 'class'])
+print(X.columns)
+y = le.fit_transform(y)
+print(y)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42,stratify=y)
+
+from sklearn.preprocessing import RobustScaler
+scaler = RobustScaler()
+#one hot encoding
+from sklearn.preprocessing import OneHotEncoder
+ohe = OneHotEncoder()
+# b = X_train
+#X_train = pd.get_dummies(X_train,columns=[c for c in cat_cols if c != 'class'])
+X_train = scaler.fit_transform(X_train)
+#print(X_train.info())
+#print(b.head())
+#X_test = pd.get_dummies(X_test,columns=[c for c in cat_cols if c != 'class'])
+X_test = scaler.transform(X_test)
 
 def train_and_evaluate_models(X_train, X_test, y_train, y_test):
     models = {
-        'Decision Tree': DecisionTreeClassifier(max_depth=4),
-        'K-Nearest Neighbors': KNeighborsClassifier(n_neighbors=1),
-        'Perceptron': Perceptron(eta0=0.1,shuffle=False),
-        'Logistic Regression': LogisticRegression()
+        'Decision Tree': DecisionTreeClassifier(max_depth=9),
+        'K-Nearest Neighbors': KNeighborsClassifier(n_neighbors=9, weights='uniform', algorithm='brute'),
+        'Logistic Regression': LogisticRegression(C=1, solver='lbfgs', penalty='l2', max_iter=100, tol=0.0001),
+        'Perceptron': Perceptron(alpha=0.001, max_iter=100, eta0=0.1, penalty='elasticnet', early_stopping=True)
     }
     
-    plt.figure(figsize=(15, 15))
-    
+    plt.figure(figsize=(15, 15),layout='') #avoid overlapping
     for i, (name, model) in enumerate(models.items(), 1):
-        model.fit(X_train, y_train)
+        # learning curve
+        train_sizes, train_scores, test_scores = learning_curve(
+             model, X_train, y_train)
+        
+        model.fit(X_train,y_train)
         y_pred = model.predict(X_test)
 
         #F1 score
-        from sklearn.metrics import f1_score,classification_report
-        f1 = f1_score(y_test, y_pred, average='weighted')
+        from sklearn.metrics import accuracy_score,classification_report
+        f1 = accuracy_score(y_test, y_pred)
         print(f"{name} Accuracy: {f1:.4f}")
         print(classification_report(y_test, y_pred))
-        
-        # learning curve
-        train_sizes, train_scores, test_scores = learning_curve(
-             model, X_train, y_train, cv=8, n_jobs=-1)
-        
+
         train_mean = np.mean(train_scores, axis=1)
         train_std = np.std(train_scores, axis=1)
         test_mean = np.mean(test_scores, axis=1)
@@ -54,47 +166,21 @@ def train_and_evaluate_models(X_train, X_test, y_train, y_test):
         plt.title(f"{name} Learning Curve")
         plt.xlabel("Training examples")
         plt.ylabel("Score")
+        plt.text(0.5, 0.5, f"{name} (tuned) F1 Score: {f1:.2f}", horizontalalignment='center', verticalalignment='center', transform=plt.gca().transAxes)
         plt.legend(loc="best")
         plt.grid()
-    
-    plt.tight_layout()
-    #plt.show()
+    plt.tight_layout(h_pad=0.5,w_pad=0.5)
+    plt.show()
     return plt
 
-def evaluate_parameters(filename):
-    
-    print("Running dataset1")
 
+def evaluate_parameters(X_train, X_test, y_train, y_test):
+    from sklearn.model_selection import KFold, validation_curve
+    from sklearn.pipeline import Pipeline
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import plots_to_pdf
 
-    # Load the data
-    df = pd.read_csv('heart.csv')
-    print(df.head())
-    print(df['target'].value_counts())
-    # #correlation graph
-    # plt.figure(figsize=(10, 8))
-    # sns.heatmap(df.corr(),annot=True, cmap='coolwarm')
-    # plt.show()
-
-
-    cat_cols = ['sex','cp','fbs','restecg','exang','slope','thal']  
-    for i in cat_cols:
-        df[i] = df[i].astype('object')
-
-    df = pd.get_dummies(df)
-    print(len(df.columns))
-    print(df.columns)
-
-    X = df.drop('target', axis=1)
-    y = df['target']
-    print(y.value_counts())
-    #split the data into train test split
-    from sklearn.model_selection import train_test_split
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
-
-    scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
     models = {
         'Decision Tree': {
             'pipeline': Pipeline([
@@ -102,9 +188,8 @@ def evaluate_parameters(filename):
             ]),
             'params': {
                 'clf__max_depth': range(1, 20),
-                'clf__criterion': ['gini', 'entropy','log_loss'],
-                'clf__min_samples_split': np.linspace(0.1, 1, 100),
-                'clf__min_samples_leaf': np.linspace(0.1, 0.99, 100),
+                'clf__min_samples_split': range(2, 11),
+                'clf__min_samples_leaf': range(1, 11),
                 'clf__ccp_alpha': np.linspace(0.0001, 0.02, 20)
             }
         },
@@ -155,7 +240,7 @@ def evaluate_parameters(filename):
         for param_name, param_range in params.items():
             train_scores, test_scores = validation_curve(
                 pipeline, X_train, y_train, param_name=param_name, param_range=param_range,
-                cv=Skfold, scoring="recall_weighted", n_jobs=-1
+                cv=Skfold, scoring="recall_micro", n_jobs=-1
             )
             
             train_mean = np.mean(train_scores, axis=1)
@@ -174,7 +259,7 @@ def evaluate_parameters(filename):
             pipeline.fit(X_train,y_train)
             y_pred = pipeline.predict(X_test)
             from sklearn.metrics import recall_score
-            recall = recall_score(y_test, y_pred, average='weighted')
+            recall = recall_score(y_test, y_pred, average='binary')
             print(f"{name} - {param_name}: {highest_test_score_value} - {highest_test_score:.4f} - {recall:.4f}")
             print(f"{name} - {param_name}: {highest_test_score_value} - {highest_test_score:.4f}")
             
@@ -227,7 +312,7 @@ def evaluate_parameters(filename):
             ax.fill_between(param_labels, test_mean - test_std, test_mean + test_std, alpha=0.2, color="navy", lw=lw)
             ax.legend(loc="best")
             ax.grid(True)
-            ax.annotate(f"Highest Validation Score: {highest_test_score:.4f}, value: {highest_test_score_value}", xy=(0.05, 0.95), xycoords='axes fraction', ha='left', va='top', color="red")            
+            ax.annotate(f"Highest Test Score: {highest_test_score:.4f}, value: {highest_test_score_value}", xy=(0.05, 0.95), xycoords='axes fraction', ha='left', va='top', color="red")            
             figures.append(fig)  # Add the figure to the list
             #plot confusion matrix
             from sklearn.metrics import confusion_matrix
@@ -235,7 +320,7 @@ def evaluate_parameters(filename):
             fig,ax=plt.subplots(figsize=(10, 6))
             import seaborn as sns
             sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-            plt.title(f"{name} - {param_name.replace('clf__', '').replace('_', ' ').title()} - Confusion Matrix({highest_test_score_value})")
+            plt.title(f"{name} - Confusion Matrix")
             plt.xlabel("Predicted")
             plt.ylabel("True")
             figures.append(fig)
@@ -243,30 +328,76 @@ def evaluate_parameters(filename):
             from scikitplot.classifiers import plot_precision_recall_curve_with_cv
             fig,ax=plt.subplots(figsize=(10, 6))
             try:
-                title = f"{name} - {param_name.replace('clf__', '').replace('_', ' ').title()} - Precision-Recall Curve({highest_test_score_value})"
                 if name =='Perceptron':
                     from sklearn.calibration import CalibratedClassifierCV
                     per = pipeline
                     clf_isotonic = CalibratedClassifierCV(per, cv=10, method='isotonic')
                     clf_isotonic.fit(X_train,y_train)
-                    plot_precision_recall_curve_with_cv(do_cv=False,clf=clf_isotonic, X=X_test, y=y_test, ax=ax,title=title)
+                    plot_precision_recall_curve_with_cv(do_cv=False,clf=clf_isotonic, X=X_test, y=y_test, ax=ax)
                     
                 else:
-                    plot_precision_recall_curve_with_cv(do_cv=False,clf=pipeline, X=X_test, y=y_test, ax=ax,title=title)
+                    plot_precision_recall_curve_with_cv(do_cv=False,clf=pipeline, X=X_test, y=y_test, ax=ax)
                 figures.append(fig)            
             except:
                 print(f"Error in {name} - Precision-Recall Curve")
             
 
     # Save all figures to a single PDF, one plot per row (page)
-    plots_to_pdf.to_pdf(figures, filename=filename)
+    plots_to_pdf.to_pdf(figures, filename='churn.pdf')
     print(t)
     #ScrollableWindow(fig) 
     
     
-import datetime
-filename = datetime.datetime.now().strftime("heart_%Y-%m-%d_%H-%M-%S.pdf")
-evaluate_parameters(filename=filename)
 #train_and_evaluate_models(X_train, X_test, y_train, y_test)
 #train_and_evaluate_models(X_train, X_test, y_train, y_test)
+# Get feature importances
+from sklearn.ensemble import RandomForestClassifier
+rf_classifier = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_classifier.fit(X_train, y_train)
+importances = rf_classifier.feature_importances_
+#feature_importances = pd.Series(importances, index=X_train.columns).sort_values(ascending=False)
+
+# # Plot feature importances
+# plt.figure(figsize=(10, 6))
+# feature_importances.plot(kind='bar')
+# plt.title('Feature Importances')
+# plt.xlabel('Features')
+# plt.ylabel('Importance')
+# plt.tight_layout()
+# plt.show()
+
+# # Print feature importances
+# print("Feature Importances:")
+# for feature, importance in feature_importances.items():
+#     print(f"{feature}: {importance:.4f}")
+
+# param_range = np.arange(10, 10000, 10)
+# from sklearn.model_selection import validation_curve
+# train_scores, test_scores = validation_curve(
+#     Perceptron(), X_train, y_train, param_name='max_iter', param_range=param_range, cv=5, scoring='accuracy', n_jobs=-1
+# )
+
+# train_mean = np.mean(train_scores, axis=1)
+# train_std = np.std(train_scores, axis=1)
+# test_mean = np.mean(test_scores, axis=1)
+# test_std = np.std(test_scores, axis=1)
+
+# plt.figure()
+# plt.title("Validation Curve with Perceptron (alpha)")
+# plt.xlabel("alpha")
+# plt.ylabel("Score")
+# plt.ylim(0.0, 1.1)
+# plt.semilogx(param_range, train_mean, label="Training score", color="darkorange", lw=2)
+# plt.fill_between(param_range, train_mean - train_std, train_mean + train_std, alpha=0.2, color="darkorange", lw=2)
+# plt.semilogx(param_range, test_mean, label="Cross-validation score", color="navy", lw=2)
+# plt.fill_between(param_range, test_mean - test_std, test_mean + test_std, alpha=0.2, color="navy", lw=2)
+# plt.legend(loc="best")
+# plt.grid(True)
+# plt.show()
+evaluate_parameters(X_train, X_test, y_train, y_test)
+#train_and_evaluate_models(X_train, X_test, y_train, y_test)
+#train_and_evaluate_models(X_train, X_test, y_train, y_test)
+
+
+
 
