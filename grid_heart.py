@@ -14,14 +14,22 @@ df = pd.read_csv('heart.csv')
 
 from sklearn.model_selection import GridSearchCV
 
-# Prepare the data
-X = df.drop('target', axis=1)
-X = pd.get_dummies(X)
-y = df['target']
-print(y.value_counts())
 
-# Split the data into train and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
+df = pd.read_csv('heart.csv')
+
+cat_cols = ['sex','cp','fbs','restecg','exang','slope','thal']  
+for i in cat_cols:
+    df[i] = df[i].astype('object')
+
+df = pd.get_dummies(df)
+print(len(df.columns))
+print(df.columns)
+
+X = df.drop('target', axis=1)
+y = df['target']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
+
 
 # Standardize the data
 scaler = StandardScaler()
@@ -30,36 +38,45 @@ X_test = scaler.transform(X_test)
 
 # Define the models and their hyperparameters for GridSearchCV
 models = {
-    # 'Decision Tree': {
-    #     'model': DecisionTreeClassifier(),
-    #     'params': {
-    #         'max_depth': range(1, 20),
-    #         'min_samples_split': range(2, 11),
-    #         'min_samples_leaf': range(1, 11)
-    #     }
-    # },
-    # 'K-Nearest Neighbors': {
-    #     'model': KNeighborsClassifier(),
-    #     'params': {
-    #         'n_neighbors': range(1, 20),
-    #         'weights': ['uniform', 'distance'],
-    #         'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']
-    #     }
-    # },
-    # 'Logistic Regression': {
-    #     'model': LogisticRegression(max_iter=1000),
-    #     'params': {
-    #         'C': np.logspace(-4, 4, 20),
-    #         'solver': ['lbfgs', 'liblinear', 'newton-cg', 'newton-cholesky', 'sag', 'saga']
-    #     }
-    # },
-    'Perceptron': {
-        'model': Perceptron(tol=1e-3),
+    'Decision Tree': {
+        'model': DecisionTreeClassifier(random_state=42),
         'params': {
-                'class_weight': ['balanced']+[{0:1.0-x, 1:x} for x in np.linspace(0.0,1,10)],
-                'penalty': ['l1', 'l2', 'elasticnet'],
-                'eta0': [0.1, 0.5, 0.9, 1.0],
-            }
+            'max_depth': range(5, 10),
+            # 'min_samples_split': np.linspace(0.001, 0.4, 10),
+            # 'min_samples_leaf': range(1, 11),
+            # 'ccp_alpha': np.linspace(0.0001, 0.01, 5),
+            'max_features': np.linspace(0.1, 1, 10),
+        }
+    },
+    'K-Nearest Neighbors': {
+        'model': KNeighborsClassifier(),
+        'params': {
+            'n_neighbors': range(1, 20),
+            # 'weights': ['uniform', 'distance'],
+            # 'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute'],
+            'p': [1,2,3,4,5,6,7]
+        }
+    },
+    'Logistic Regression': {
+        'model': LogisticRegression(max_iter=1000,solver='saga',penalty='elasticnet',random_state=42),
+        'params': {
+            'class_weight':[{0: 1.0, 1: 1.0}, 'balanced',{0: 0.5555555555555556, 1: 0.4444444444444444},
+                             {0: 0.4444444444444444, 1: 0.5555555555555556}, 
+                            {0: 0.33333333333333337, 1: 0.6666666666666666}],
+            'l1_ratio': np.linspace(0.3,0.7,4),
+            'C': np.linspace(0.0001,0.25,4),
+        }
+    },
+    'Perceptron': {
+        'model': Perceptron(random_state=42),
+        'params': {
+                'class_weight':[{0: 1.0, 1: 1.0}, 'balanced', 
+                                {0: 0.5555555555555556, 1: 0.4444444444444444}, 
+                                {0: 0.4444444444444444, 1: 0.5555555555555556}, 
+                                {0: 0.33333333333333337, 1: 0.6666666666666666}],
+            'penalty': ['l1','l2','elasticnet'],
+            'l1_ratio': np.linspace(0,1,5),
+        }
     }
 }
 
@@ -67,47 +84,17 @@ models = {
 best_params = {}
 scores = {}
 for name, config in models.items():
-    grid_search = GridSearchCV(config['model'], config['params'], cv=5, scoring='f1_weighted', n_jobs=-1,verbose=2)
+    print([{0:1.0, 1:1.0}]+['balanced']+[{0:1.0-x, 1:x} for x in np.linspace(0.0,1,10)])
+    grid_search = GridSearchCV(config['model'], config['params'], cv=5, scoring='recall_weighted', n_jobs=-1,verbose=3)
     grid_search.fit(X_train, y_train)
-    # best_params[name] = grid_search.best_params_
-    # scores[name] = grid_search.best_score_
-    # print(f"Best parameters for {name}: {grid_search.best_params_}")
-    # print(f"Best score for {name}: {grid_search.best_score_}")
-    # #sort the mean test scores with their params
-    # sorted_mean_test_scores = sorted(zip(grid_search.cv_results_['mean_test_score'], grid_search.cv_results_['params']), key=lambda x: x[0], reverse=True)
-    # print(sorted_mean_test_scores)
-    # #calculate hyper parameter importance and how it affects the score
-    # #plot the score against the hyper parameter
-    # plt.figure()
-    # plt.plot(sorted_mean_test_scores)
-    # plt.xlabel('Hyperparameter')
-    # plt.ylabel('Mean Test Score')
-    # plt.title(f'Hyperparameter Importance for {name}')
-    # plt.show()
-    # if name == 'Perceptron':
-    #     #print all mean test scores
-    #     print(grid_search.cv_results_['mean_test_score'])
-    #     print(grid_search.cv_results_['params'])
-#validation curve
-for name, config in models.items():
-    from sklearn.model_selection import validation_curve
-    plt.figure()
-    train_scores, test_scores = validation_curve(config['model'], X_train, y_train, param_name='eta0', param_range=np.logspace(-5, 1, 20), cv=5, scoring='f1_weighted')
-    plt.plot(np.logspace(-5, 0, 20), train_scores.mean(axis=1), label='Training score')
-    plt.plot(np.logspace(-5, 0, 20), test_scores.mean(axis=1), label='Cross-validation score')
-    plt.xlabel('eta0')
-    plt.ylabel('F1 Score')
-    plt.title(f'Validation Curve for {name}')
-    plt.legend()
-    plt.show()
-    print(test_scores)
-
-
-
+    best_params[name] = grid_search.best_params_
+    scores[name] = grid_search.best_score_
+    print(f"Best parameters for {name}= {grid_search.best_params_}")
+    print(f"Best score for {name}: {grid_search.best_score_}")
 # Display the best 3 hyperparameters for each model
 for name, params in best_params.items():
     print(f"\n{name} best 3 hyperparameters:")
-    for param, value in list(params.items())[:3]:
+    for param, value in list(params.items()):
         print(f"{param}: {value}")
 
 # Display the best scores for each model
@@ -115,4 +102,13 @@ print("\nBest scores for each model:")
 for name, score in scores.items():
     print(f"{name}: {score}")
 
+#save everything to a text file
+with open('heart_grid_search_results.txt', 'w') as f:
+    for name, params in best_params.items():
+        f.write(f"{name} best 3 hyperparameters:\n")
+        for param, value in list(params.items()):
+            f.write(f"{param}= {value}\n")
+    f.write("\nBest scores for each model:\n")
+    for name, score in scores.items():
+        f.write(f"{name}: {score}\n")
 

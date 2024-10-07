@@ -1,0 +1,5 @@
+Decision Tree best 3 hyperparameters:
+max_depth: 6
+
+Best scores for each model:
+Decision Tree: 0.8335037690502514

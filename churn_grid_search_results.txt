@@ -1,0 +1,24 @@
+Decision Tree best 3 hyperparameters:
+class_weight: {0: 0.4444444444444444, 1: 0.5555555555555556}
+max_depth: 6
+min_samples_leaf: 3
+min_samples_split: 2
+K-Nearest Neighbors best 3 hyperparameters:
+n_neighbors: 10
+weights: distance
+Logistic Regression best 3 hyperparameters:
+C: 1.6711111111111112
+class_weight: {0: 0.33333333333333337, 1: 0.6666666666666666}
+penalty: l1
+solver: liblinear
+Perceptron best 3 hyperparameters:
+alpha: 1e-05
+class_weight: {0: 0.5555555555555556, 1: 0.4444444444444444}
+eta0: 0.6733333333333333
+penalty: l1
+
+Best scores for each model:
+Decision Tree: 0.8392212253545221
+K-Nearest Neighbors: 0.8107897397587486
+Logistic Regression: 0.7868475671586745
+Perceptron: 0.763049252051051

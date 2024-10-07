@@ -123,7 +123,6 @@ def evaluate_parameters(filename):
             'params': {
                 'clf__n_neighbors': range(1, 20),
                 'clf__weights': ['uniform', 'distance'],
-                'clf__algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']
             }
         },
         'Logistic Regression': {
@@ -135,12 +134,12 @@ def evaluate_parameters(filename):
                  'clf__max_iter': [100,200,300,400,500,600,700,800,900,1000,1100],
                  'clf__solver': ['lbfgs', 'liblinear', 'newton-cg', 'newton-cholesky', 'sag', 'saga'],
                  'clf__C': np.linspace(0.0001,2,10),
-                 
+                 'clf__penalty': ['l1', 'l2', 'elasticnet'],
             }
         },
         'Perceptron': {
             'pipeline': Pipeline([
-                ('clf', Perceptron(random_state=42,penalty='l1'))
+                ('clf', Perceptron(random_state=42))
             ]),
             'params': {
                 'clf__class_weight': [{0:1.0, 1:1.0}]+['balanced']+[{0:1.0-x, 1:x} for x in np.linspace(0.0,1,10)],
@@ -149,7 +148,7 @@ def evaluate_parameters(filename):
                 'clf__n_iter_no_change': [1,2,3,4,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,145,150,155,160,165,170,175,180,185,190,195,200],
                 'clf__tol' : np.linspace(0.0001,0.01,10),
                 'clf__alpha' : np.linspace(0.00001,0.01,100),
-                'clf__eta0' : np.linspace(0.00001,0.01,100),
+                'clf__eta0' : np.linspace(0.00001,2,100),
                 'clf__early_stopping': [True,False],
             }
         }

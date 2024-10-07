@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 import plots_to_pdf
 import seaborn as sns
 
+#set random seed
+np.random.seed(42)
 
 def train_and_evaluate_models(X_train, X_test, y_train, y_test):
     models = {
@@ -91,55 +93,56 @@ def evaluate_parameters(filename):
     from sklearn.model_selection import train_test_split
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
+    print(X_train)
 
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
     models = {
-        'Decision Tree': {
-            'pipeline': Pipeline([
-                ('clf', DecisionTreeClassifier(random_state=42))
-            ]),
-            'params': {
-                'clf__max_depth': range(1, 20),
-                'clf__criterion': ['gini', 'entropy','log_loss'],
-                'clf__min_samples_split': np.linspace(0.1, 1, 100),
-                'clf__min_samples_leaf': np.linspace(0.1, 0.99, 100),
-                'clf__ccp_alpha': np.linspace(0.0001, 0.02, 20)
-            }
-        },
-        'K-Nearest Neighbors': {
-            'pipeline': Pipeline([
-                ('clf', KNeighborsClassifier(n_neighbors=15))
-            ]),
-            'params': {
-                'clf__n_neighbors': range(1, 20),
-                'clf__weights': ['uniform', 'distance'],
-                'clf__algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']
-            }
-        },
-        'Logistic Regression': {
-            'pipeline': Pipeline([
-                ('clf', LogisticRegression(random_state=42,penalty='l1',solver='liblinear'))
-            ]),
-            'params': {
-                 'clf__class_weight': [{0:1.0, 1:1.0}]+['balanced']+[{0:1.0-x, 1:x} for x in np.linspace(0.0,1,10)],
-                 'clf__max_iter': [100,200,300,400,500,600,700,800,900,1000,1100],
-                 'clf__C': np.linspace(0.0001,2,100),
-                 'clf__solver': ['liblinear', 'saga'],
-                 #'clf__penalty': ['l1', 'l2', 'elasticnet'],
-            }
-        },
+        # 'Decision Tree': {
+        #     'pipeline': Pipeline([
+        #         ('clf', DecisionTreeClassifier(random_state=42))
+        #     ]),
+        #     'params': {
+        #         'clf__max_depth': range(1, 20),
+        #         # 'clf__criterion': ['gini', 'entropy','log_loss'],
+        #         # 'clf__min_samples_split': range(2, 100),
+        #         # 'clf__min_samples_leaf': range(1,100),
+        #         # 'clf__ccp_alpha': np.linspace(0.0001, 0.02, 20),
+        #         'clf__max_features': np.linspace(0.1, 1, 10),
+        #     }
+        # },
+        # 'K-Nearest Neighbors': {
+        #     'pipeline': Pipeline([
+        #         ('clf', KNeighborsClassifier(n_neighbors=5,algorithm='kd_tree'))
+        #     ]),
+        #     'params': {
+        #         'clf__n_neighbors': range(1, 20),
+        #         'clf__p': [1,2,3,4,5,6,7],
+        #     }
+        # },
+        # 'Logistic Regression': {
+        #     'pipeline': Pipeline([
+        #         ('clf', LogisticRegression(random_state=42,penalty='elasticnet',solver='saga',l1_ratio=0.5))
+        #     ]),
+        #     'params': {
+        #          'clf__class_weight': [{0:1.0, 1:1.0}]+['balanced']+[{0:1.0-x, 1:x} for x in np.linspace(0.0,1,10)],
+        #         #  'clf__max_iter': [100,200,300,400,500,600,700,800,900,1000,1100],
+        #          'clf__C': np.linspace(0.0001,2,100),
+        #          'clf__l1_ratio': np.linspace(0,1,100),
+        #     }
+        # },
         'Perceptron': {
             'pipeline': Pipeline([
-                ('clf', Perceptron(random_state=42))
+                ('clf', Perceptron(random_state=42,penalty='elasticnet'))
             ]),
             'params': {
                 'clf__class_weight': [{0:1.0, 1:1.0}]+['balanced']+[{0:1.0-x, 1:x} for x in np.linspace(0.0,1,10)],
-               # 'clf__penalty': ['l1', 'l2', 'elasticnet'],
-                #'clf__l1_ratio': np.linspace(0,0.3,100),
-                'clf__eta0': np.linspace(0.0001, 1, 100),
-                'clf__max_iter': [100,200,300,400,500,600,700,800,900,1000,1100],
+                'clf__penalty': ['l1', 'l2', 'elasticnet'],
+                # 'clf__alpha': np.linspace(0,1,100),
+                # 'clf__l1_ratio': np.linspace(0,1,100),
+                # 'clf__eta0': np.linspace(0.0001, 1, 100),
+                # 'clf__max_iter': [100,200,300,400,500,600,700,800,900,1000,1100],
             }
         }
     }
@@ -155,7 +158,7 @@ def evaluate_parameters(filename):
         for param_name, param_range in params.items():
             train_scores, test_scores = validation_curve(
                 pipeline, X_train, y_train, param_name=param_name, param_range=param_range,
-                cv=Skfold, scoring="recall_weighted", n_jobs=-1
+                cv=Skfold, scoring="recall_micro", n_jobs=-1
             )
             
             train_mean = np.mean(train_scores, axis=1)
@@ -174,7 +177,7 @@ def evaluate_parameters(filename):
             pipeline.fit(X_train,y_train)
             y_pred = pipeline.predict(X_test)
             from sklearn.metrics import recall_score
-            recall = recall_score(y_test, y_pred, average='weighted')
+            recall = recall_score(y_test, y_pred, average='micro')
             print(f"{name} - {param_name}: {highest_test_score_value} - {highest_test_score:.4f} - {recall:.4f}")
             print(f"{name} - {param_name}: {highest_test_score_value} - {highest_test_score:.4f}")
             
