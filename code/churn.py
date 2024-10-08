@@ -67,10 +67,12 @@ def evaluate_parameters(filename):
             ]),
             'params': {
                 'clf__class_weight': [{0:1.0, 1:1.0}]+['balanced']+[{0:1.0-x, 1:x} for x in np.linspace(0.0,1,10)],
+                'clf__max_features': np.linspace(0.1, 1, 10),
+                'clf__criterion': ['gini', 'entropy','log_loss'],
                 'clf__max_depth': range(1, 50),
                 'clf__min_samples_split': range(2, 11),
                 'clf__min_samples_leaf': range(1, 11),
-                'clf__ccp_alpha': np.linspace(0.0001, 0.02, 20)
+                'clf__ccp_alpha': np.linspace(0.0001, 0.003, 20)
             }
         },
         'K-Nearest Neighbors': {

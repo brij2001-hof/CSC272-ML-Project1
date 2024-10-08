@@ -66,7 +66,7 @@ def evaluate_parameters(filename):
                 'clf__criterion': ['gini', 'entropy','log_loss'],
                 'clf__min_samples_split': range(2, 100),
                 'clf__min_samples_leaf': range(1,100),
-                'clf__ccp_alpha': np.linspace(0.0001, 0.02, 20),
+                'clf__ccp_alpha': np.linspace(0.0001, 0.003, 20),
                 'clf__max_features': np.linspace(0.1, 1, 10),
             }
         },

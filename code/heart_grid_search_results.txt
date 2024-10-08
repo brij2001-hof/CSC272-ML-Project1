@@ -1,0 +1,26 @@
+
+Decision Tree best 3 hyperparameters:
+max_depth= 9
+max_features= 0.6
+
+K-Nearest Neighbors best 3 hyperparameters:
+n_neighbors= 1
+p= 1
+
+Logistic Regression best 3 hyperparameters:
+C= 0.25
+class_weight= {0: 0.4444444444444444, 1: 0.5555555555555556}
+l1_ratio= 0.3
+solver= saga
+penalty= elasticnet
+
+Perceptron best 3 hyperparameters:
+class_weight= {0: 0.4444444444444444, 1: 0.5555555555555556}
+l1_ratio= 0.2222222222222222
+penalty= elasticnet
+
+Best scores for each model:
+Decision Tree: 0.9668170518855451
+K-Nearest Neighbors: 0.9709700111069974
+Logistic Regression: 0.8421709849047551
+Perceptron: 0.807341104398877

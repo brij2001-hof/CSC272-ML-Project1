@@ -1,0 +1,25 @@
+
+
+
+Model: Decision Tree,
+Best Parameters: ['class_weight={0: 0.44, 1: 0.56}', 'max_depth=6', 'min_samples_leaf=3', 'min_samples_split=2'], 
+Time to Train: 0.015, 
+F1_weighted Score: 0.851
+
+
+Model: K-Nearest Neighbors,
+Best Parameters: ['n_neighbors=10', 'weights=distance'], 
+Time to Train: 0.008, 
+F1_weighted Score: 0.82
+
+
+Model: Logistic Regression,
+Best Parameters: ['C=1.6711', 'class_weight={0: 0.33, 1: 0.67}', 'penalty=l1', 'solver=liblinear'], 
+Time to Train: 0.021, 
+F1_weighted Score: 0.804
+
+
+Model: Perceptron,
+Best Parameters: ['alpha=0.0', 'class_weight={0: 0.56, 1: 0.44}', 'eta0=0.6733', 'penalty=l1'], 
+Time to Train: 0.004, 
+F1_weighted Score: 0.765

@@ -1,0 +1,25 @@
+
+
+
+Model: Decision Tree,
+Best Parameters: ['max_depth=9', 'max_features=0.6'], 
+Time to Train: 0.001, 
+Recall Score: 0.978
+
+
+Model: K-Nearest Neighbors,
+Best Parameters: ['n_neighbors=1', 'p=1'], 
+Time to Train: 0.001, 
+Recall Score: 0.981
+
+
+Model: Logistic Regression,
+Best Parameters: ['C=0.25', 'class_weight={0: 0.44, 1: 0.56}', 'l1_ratio=0.3', 'solver=saga', 'penalty=elasticnet'], 
+Time to Train: 0.015, 
+Recall Score: 0.853
+
+
+Model: Perceptron,
+Best Parameters: ['class_weight={0: 0.44, 1: 0.56}', 'l1_ratio=0.2222', 'penalty=elasticnet'], 
+Time to Train: 0.001, 
+Recall Score: 0.775
