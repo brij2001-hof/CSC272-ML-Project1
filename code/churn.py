@@ -167,20 +167,22 @@ def evaluate_parameters(filename):
                 ax.set_title(f"{name} - Class Weight")
                 ax.set_xlabel('Class Weight Class0,Class1')
                 try:
-                    highest_test_score_value = f"0:{highest_test_score_value[0]:.2f} , 1:{highest_test_score_value[1]:.2f}"
+                    param_value = f"0:{highest_test_score_value[0]:.2f} , 1:{highest_test_score_value[1]:.2f}"
                 except:
-                    highest_test_score_value = str(highest_test_score_value)
+                    param_value = str(highest_test_score_value)
             else:
                 param_labels = param_range
                 ax.set_title(f"{name} - {param_name.replace('clf__', '').replace('_', ' ').title()}")
                 ax.set_xlabel(param_name.replace('clf__', '').replace('_', ' ').title())
                 try:
+                    #3 significant digits
                     if highest_test_score_value.round(3) == 0.000:
-                        highest_test_score_value = f'{highest_test_score_value:.5f}'
+                        param_value = f'{highest_test_score_value:.5f}'
                     else:
-                        highest_test_score_value = f"{highest_test_score_value.round(3)}"
+                        param_value = f"{highest_test_score_value.round(3)}"
+
                 except:
-                    highest_test_score_value = str(highest_test_score_value)
+                    param_value = str(highest_test_score_value)
             ax.set_ylabel("F1 Weighted Score")
             ax.set_ylim(min(min(test_mean),min(train_mean))-0.1,max(max(test_mean),max(train_mean))+0.1)
             lw = 2
@@ -190,18 +192,19 @@ def evaluate_parameters(filename):
             ax.fill_between(param_labels, test_mean - test_std, test_mean + test_std, alpha=0.2, color="navy", lw=lw)
             ax.legend(loc="best")
             ax.grid(True)
-            ax.annotate(f"Highest Validation Score: {highest_test_score:.4f}, value: {highest_test_score_value}", xy=(0.05, 0.95), xycoords='axes fraction', ha='left', va='top', color="red")            
-            figures.append(fig)  # Add the figure to the list
+            ax.annotate(f"Highest Validation Score: {highest_test_score:.4f}, value: {param_value}", xy=(0.05, 0.95), xycoords='axes fraction', ha='left', va='top', color="red")            
+            figures.append(fig)
             #plot confusion matrix
             from sklearn.metrics import confusion_matrix
             cm = confusion_matrix(y_test, y_pred)
             fig,ax=plt.subplots(figsize=(8, 6))
             import seaborn as sns
             sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-            plt.title(f"{name} - {param_name.replace('clf__', '').replace('_', ' ').title()} - Confusion Matrix({highest_test_score_value})")
+            plt.title(f"{name} - {param_name.replace('clf__', '').replace('_', ' ').title()}({param_value}) - Confusion Matrix")
             plt.xlabel("Predicted")
             plt.ylabel("True")
             figures.append(fig)
+            
     # Save all figures to a single PDF, one plot per row (page)
     plots_to_pdf.to_pdf(figures, filename=filename)
     print(t)

@@ -197,28 +197,12 @@ def evaluate_parameters(filename):
             fig,ax=plt.subplots(figsize=(8, 6))
             import seaborn as sns
             sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-            plt.title(f"{name} - {param_name.replace('clf__', '').replace('_', ' ').title()} - Confusion Matrix({param_value})")
+            plt.title(f"{name} - {param_name.replace('clf__', '').replace('_', ' ').title()}({param_value}) - Confusion Matrix")
             plt.xlabel("Predicted")
             plt.ylabel("True")
             figures.append(fig)
 
-            from scikitplot.classifiers import plot_precision_recall_curve_with_cv
-            fig,ax=plt.subplots(figsize=(8, 6))
-            try:
-                title = f"{name} - {param_name.replace('clf__', '').replace('_', ' ').title()} - Precision-Recall Curve({param_value})"
-                if name =='Perceptron':
-                    from sklearn.calibration import CalibratedClassifierCV
-                    per = config['pipeline']
-                    per.set_params(**{param_name: highest_test_score_value})
-                    clf_isotonic = CalibratedClassifierCV(per, cv=10, method='isotonic')
-                    clf_isotonic.fit(X_train,y_train)
-                    plot_precision_recall_curve_with_cv(do_cv=False,clf=clf_isotonic, X=X_test, y=y_test, ax=ax,title=title,random_state=42)
-                    
-                else:
-                    plot_precision_recall_curve_with_cv(do_cv=False,clf=pipeline, X=X_test, y=y_test, ax=ax,title=title,random_state=42)
-                figures.append(fig)            
-            except:
-                print(f"Error in {name} - Precision-Recall Curve")
+            
             
 
     # Save all figures to a single PDF, one plot per row (page)

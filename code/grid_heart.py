@@ -134,6 +134,25 @@ def gridsearch_learning_curves(filename="backup_heart.pdf"):
         ax.set_xlabel('Training examples')
         ax.set_ylabel('Score')
         figure.append(fig)
+        #plot precision-recall curve
+        from scikitplot.classifiers import plot_precision_recall_curve_with_cv
+        fig,ax=plt.subplots(figsize=(8, 6))
+        try:
+            title = f"{name} - Precision-Recall Curve"
+            if name =='Perceptron':
+                from sklearn.calibration import CalibratedClassifierCV
+                per = config['pipeline']
+                per.set_params(**best_params[name])
+                clf_isotonic = CalibratedClassifierCV(per, cv=10, method='isotonic')
+                clf_isotonic.fit(X_train,y_train)
+                plot_precision_recall_curve_with_cv(do_cv=False,clf=clf_isotonic, X=X_test, y=y_test, ax=ax,title=title,random_state=42)
+                
+            else:
+                model.fit(X_train,y_train)
+                plot_precision_recall_curve_with_cv(do_cv=False,clf=model, X=X_test, y=y_test, ax=ax,title=title,random_state=42)
+            figure.append(fig)            
+        except:
+            print(f"Error in {name} - Precision-Recall Curve")
 
     for i,j in best_params.items():
             #round values
@@ -166,10 +185,22 @@ def gridsearch_learning_curves(filename="backup_heart.pdf"):
             y_pred = test_model.predict(X_test)
             recall = recall_score(y_test, y_pred,average='macro')
             recall = round(recall,3)
+            #plot confusion matrix
+            from sklearn.metrics import confusion_matrix
+            cm = confusion_matrix(y_test, y_pred)
+            fig,ax=plt.subplots(figsize=(8, 6))
+            import seaborn as sns
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+            plt.title(f"{name} - Confusion Matrix")
+            plt.xlabel("Predicted")
+            plt.ylabel("True")
+            figure.append(fig)
+            plt.show()
+
+
             print(f"\n\n\nModel: {name},\nBest Parameters: {temp}, \nTime to Train: {total_time}, \nRecall Score: {recall}")
             f.write(f"\n\n\nModel: {name},\nBest Parameters: {temp}, \nTime to Train: {total_time}, \nRecall Score: {recall}")
-
-
+            
         
 
     

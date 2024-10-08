@@ -21,14 +21,9 @@ def gridsearch_learning_curves(filename='backup_churn.csv'):
     df = pd.read_csv('churn.csv')
     df = df.dropna()
     df = df.drop(['RowNumber','CustomerId','Surname'], axis=1)
-    #feature importance
-
-
-    #print(df.head())
     df.columns = df.columns.str.replace("'", "") #there were apostrophes in the column names
-    #smote to balance the data
 
-    #apply label encoder to categorical columns
+    #getting dummies for categorical columns
     df=pd.get_dummies(df)
     print(df.head())
 
@@ -169,8 +164,20 @@ def gridsearch_learning_curves(filename='backup_churn.csv'):
             y_pred = test_model.predict(X_test)
             f1 = f1_score(y_test, y_pred,average='weighted')
             f1 = round(f1,3)
+            #plot confusion matrix
+            from sklearn.metrics import confusion_matrix
+            cm = confusion_matrix(y_test, y_pred)
+            fig,ax=plt.subplots(figsize=(8, 6))
+            import seaborn as sns
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+            plt.title(f"{name} - Confusion Matrix")
+            plt.xlabel("Predicted")
+            plt.ylabel("True")
+            figure.append(fig)
+
             print(f"\n\n\nModel: {name},\nBest Parameters: {temp}, \nTime to Train: {total_time}, \nF1_weighted Score: {f1}")
             f.write(f"\n\n\nModel: {name},\nBest Parameters: {temp}, \nTime to Train: {total_time}, \nF1_weighted Score: {f1}")
+            
 
 
 
