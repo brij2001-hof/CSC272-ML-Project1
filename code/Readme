@@ -1,1 +1,28 @@
-Running the code:
+Standard scikit-learn, matplotlib, seaborn
+
+example folder contains the pdfs and txt files generated for datasets.
+
+Running just main.py will generate validation and learning curves for both datasets(INCLUDING GRID SEARCH!!).
+    - Make sure plt_to_pdf.py is in the same directory as the .py files.
+    - Running leaning curves also includes grid search. Comment the gridsearch_learning_curves() function calls to stop
+    - Each .py file can also be run independently.
+    - .pdf filenames are generated automatically with the current timestamp.
+    - .txt files are named according to the dataset.(WILL BE OVERWRITTEN EACH TIME!!!!!)
+
+
+Note: Grid search can a some time.
+
+What each file does:
+heart.py:
+    -Generates parameter tuning curves for the heart dataset.
+churn.py:
+    -Generates parameter tuning curves for the churn dataset.
+grid_heart.py:
+    -Performs grid search for the heart dataset.
+    -Generates learning curves for the heart dataset.
+    -generates .txt file with grid search results and test set scores.
+GRID_churn.py:
+    -Performs grid search for the churn dataset.
+    -Generates learning curves for the churn dataset.
+    -generates .txt file with grid search results and test set scores.
+
