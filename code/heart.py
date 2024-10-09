@@ -30,10 +30,13 @@ def evaluate_parameters(filename):
     df = pd.read_csv('heart.csv')
     print(df.head())
     print(df['target'].value_counts())
-    # #correlation graph
+    #correlation graph
+    # import seaborn as sns
+    # matplotlib.use('TkAgg')
     # plt.figure(figsize=(10, 8))
     # sns.heatmap(df.corr(),annot=True, cmap='coolwarm')
     # plt.show()
+    # exit()
 
 
     cat_cols = ['sex','cp','fbs','restecg','exang','slope','thal'] #for categorical columns
@@ -47,6 +50,19 @@ def evaluate_parameters(filename):
     X = df.drop('target', axis=1)
     y = df['target']
     print(y.value_counts())
+    #plot feature importance#plot feature importance
+    # from sklearn.ensemble import RandomForestClassifier
+    # model = RandomForestClassifier(n_estimators=100, random_state=42)
+    # model.fit(X, y)
+    # importances = model.feature_importances_
+    # indices = np.argsort(importances)[::-1]
+    # matplotlib.use('TkAgg')
+    # plt.figure(figsize=(10, 8))
+    # plt.title("Feature Importances")
+    # plt.bar(range(X.shape[1]), importances[indices], color="r", align="center")
+    # plt.xticks(range(X.shape[1]), X.columns[indices], rotation=90)
+    # plt.show()
+    # exit()
     #split the data into train test split
     from sklearn.model_selection import train_test_split
 
@@ -72,34 +88,41 @@ def evaluate_parameters(filename):
         },
         'K-Nearest Neighbors': {
             'pipeline': Pipeline([
-                ('clf', KNeighborsClassifier(n_neighbors=5,algorithm='kd_tree'))
+                ('clf', KNeighborsClassifier())
             ]),
             'params': {
                 'clf__n_neighbors': range(1, 20),
+                'clf__weights': ['uniform', 'distance'],
+                'clf__algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute'],
                 'clf__p': [1,2,3,4,5,6,7],
             }
         },
         'Logistic Regression': {
             'pipeline': Pipeline([
-                ('clf', LogisticRegression(random_state=42,penalty='elasticnet',solver='saga',l1_ratio=0.5))
+                ('clf', LogisticRegression(random_state=42,penalty='l2'))
+                #('clf', LogisticRegression(random_state=42,penalty='elasticnet',solver='saga',l1_ratio=0.5))
+                # ('clf', LogisticRegression(random_state=42,solver='saga',l1_ratio=0.5))
             ]),
             'params': {
                  'clf__class_weight': [{0:1.0, 1:1.0}]+['balanced']+[{0:1.0-x, 1:x} for x in np.linspace(0.0,1,10)],
+                 'clf__solver': ['lbfgs', 'liblinear', 'newton-cg', 'newton-cholesky', 'sag', 'saga'],
                 #  'clf__max_iter': [100,200,300,400,500,600,700,800,900,1000,1100],
-                 'clf__C': np.linspace(0.0001,2,100),
-                 'clf__l1_ratio': np.linspace(0,1,100),
+                 'clf__C': np.linspace(0.1,5,100),
+                #  'clf__penalty': ['l1', 'l2', 'elasticnet'],
+                 #'clf__l1_ratio': np.linspace(0,1,100),
             }
         },
         'Perceptron': {
             'pipeline': Pipeline([
-                ('clf', Perceptron(random_state=42))
+                ('clf', Perceptron(random_state=42,penalty='l1'))
             ]),
             'params': {
                 'clf__class_weight': [{0:1.0, 1:1.0}]+['balanced']+[{0:1.0-x, 1:x} for x in np.linspace(0.0,1,10)],
                 'clf__penalty': ['l1', 'l2', 'elasticnet'],
-                'clf__alpha': np.linspace(0,1,100),
-                'clf__l1_ratio': np.linspace(0,1,100),
-                'clf__eta0': np.linspace(0.0001, 1, 100),
+                'clf__alpha': np.linspace(0.00001,0.1,100),
+                #'clf__l1_ratio': np.linspace(0,1,100),
+                'clf__eta0': np.linspace(0.00001, 2, 100),
+                'clf__tol' : np.linspace(0.0001,1,100),
                 'clf__max_iter': [100,200,300,400,500,600,700,800,900,1000,1100],
             }
         }
@@ -209,8 +232,10 @@ def evaluate_parameters(filename):
     plots_to_pdf.to_pdf(figures, filename=filename)
     print(t)
     #ScrollableWindow(fig) 
-    
-    
 
-#evaluate_parameters(filename)
+
+if __name__ == "__main__":
+    import datetime
+    filename = datetime.datetime.now().strftime("heart_HyperTuning_%Y-%m-%d_%H-%M-%S.pdf")
+    evaluate_parameters(filename)
 

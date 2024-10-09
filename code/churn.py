@@ -24,8 +24,7 @@ def evaluate_parameters(filename):
     df = pd.read_csv('churn.csv')
     df = df.dropna()
     df = df.drop(['RowNumber','CustomerId','Surname'], axis=1)
-    #feature importance
-
+    
 
     #print(df.head())
     df.columns = df.columns.str.replace("'", "") #there were apostrophes in the column names
@@ -33,10 +32,31 @@ def evaluate_parameters(filename):
 
     #apply label encoder to categorical columns
     df=pd.get_dummies(df)
-    print(df.head())
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    #correlation graph
+    # matplotlib.use('TkAgg')
+    # plt.figure(figsize=(10, 8))
+    # sns.heatmap(df.corr(),annot=True, cmap='coolwarm')
+    # plt.show()
+    # exit()
+
     
     X = df.drop('Exited', axis=1)
     y = df['Exited']
+
+    #plot feature importance#plot feature importance
+    # from sklearn.ensemble import RandomForestClassifier
+    # model = RandomForestClassifier(n_estimators=100, random_state=42)
+    # model.fit(X, y)
+    # importances = model.feature_importances_
+    # indices = np.argsort(importances)[::-1]
+    # matplotlib.use('TkAgg')
+    # plt.figure(figsize=(10, 8))
+    # plt.title("Feature Importances")
+    # plt.bar(range(X.shape[1]), importances[indices], color="r", align="center")
+    # plt.xticks(range(X.shape[1]), X.columns[indices], rotation=90)
+    # plt.show()
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42,stratify=y)
 
@@ -82,30 +102,36 @@ def evaluate_parameters(filename):
             'params': {
                 'clf__n_neighbors': range(1, 20),
                 'clf__weights': ['uniform', 'distance'],
+                'clf__algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute'],
+                'clf__p': [1,2,3,4,5,6,7],
             }
         },
         'Logistic Regression': {
             'pipeline': Pipeline([
                 ('clf', LogisticRegression(random_state=42,penalty='l2'))
+                #('clf', LogisticRegression(random_state=42,penalty='elasticnet',solver='saga',l1_ratio=0.5))
+                # ('clf', LogisticRegression(random_state=42,solver='saga',l1_ratio=0.5))
             ]),
             'params': {
                  'clf__class_weight': [{0:1.0, 1:1.0}]+['balanced']+[{0:1.0-x, 1:x} for x in np.linspace(0.0,1,10)],
-                 'clf__max_iter': [100,200,300,400,500,600,700,800,900,1000,1100],
                  'clf__solver': ['lbfgs', 'liblinear', 'newton-cg', 'newton-cholesky', 'sag', 'saga'],
-                 'clf__C': np.linspace(0.0001,2,10),
+                #  'clf__max_iter': [100,200,300,400,500,600,700,800,900,1000,1100],
+                 'clf__C': np.linspace(0.1,5,100),
+                #  'clf__penalty': ['l1', 'l2', 'elasticnet'],
+                 #'clf__l1_ratio': np.linspace(0,1,10),
             }
         },
         'Perceptron': {
             'pipeline': Pipeline([
-                ('clf', Perceptron(random_state=42))
+                ('clf', Perceptron(random_state=42,penalty='l1'))
             ]),
             'params': {
                 'clf__class_weight': [{0:1.0, 1:1.0}]+['balanced']+[{0:1.0-x, 1:x} for x in np.linspace(0.0,1,10)],
                 'clf__penalty': ['l1', 'l2', 'elasticnet'],
-                'clf__max_iter': [1000,1100],
+                'clf__max_iter': [100,200,300,400,500,600,700,800,900,1000,1100],
                 'clf__n_iter_no_change': [1,2,3,4,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,145,150,155,160,165,170,175,180,185,190,195,200],
-                'clf__tol' : np.linspace(0.0001,0.01,10),
-                'clf__alpha' : np.linspace(0.00001,0.01,100),
+                'clf__tol' : np.linspace(0.0001,1,100),
+                'clf__alpha' : np.linspace(0.00001,0.08,100),
                 'clf__eta0' : np.linspace(0.00001,2,100),
                 'clf__early_stopping': [True,False],
             }
@@ -126,7 +152,7 @@ def evaluate_parameters(filename):
                 pipeline, X_train, y_train, param_name=param_name, param_range=param_range,
                 cv=Skfold, scoring='f1_weighted', n_jobs=-1
             )
-            
+            pipeline = config['pipeline'] #get default pipeline for confusion matrix 
             train_mean = np.mean(train_scores, axis=1)
             train_std = np.std(train_scores, axis=1)
             test_mean = np.mean(test_scores, axis=1)
@@ -211,6 +237,11 @@ def evaluate_parameters(filename):
     plots_to_pdf.to_pdf(figures, filename=filename)
     print(t)
 
+# import datetime
+# filename = datetime.datetime.now().strftime("churn_HyperTuning_%Y-%m-%d_%H-%M-%S.pdf")
 # evaluate_parameters(filename=filename)
 
-
+if __name__ == "__main__":
+    import datetime
+    filename = datetime.datetime.now().strftime("churn_HyperTuning_%Y-%m-%d_%H-%M-%S.pdf")
+    evaluate_parameters(filename=filename)

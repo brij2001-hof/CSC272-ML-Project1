@@ -63,6 +63,7 @@ def gridsearch_learning_curves(filename='backup_churn.csv'):
             'params': {
                 'n_neighbors': range(4, 11),
                 'weights': ['uniform', 'distance'],
+                'p': [1,2,3,4],
             }
         },
         'Logistic Regression': {
@@ -118,19 +119,24 @@ def gridsearch_learning_curves(filename='backup_churn.csv'):
             f.write(f"{name}: {score}\n")
 
     figure=[]
+    mean_fit_times = {}
+    mean_train_scores = {}
     for name, config in models.items():
         model = config['model'].set_params(**best_params[name])
-        train_sizes, train_scores, test_scores = learning_curve(model, X_train, y_train,scoring='recall_macro', 
+        train_sizes, train_scores, test_scores, fit_times, score_times = learning_curve(model, X_train, y_train,scoring='f1_weighted', 
                                                                 cv=5,shuffle=True, n_jobs=-1,random_state=42,
-                                                                train_sizes=np.linspace(0.1, 1.0, 100))
+                                                                train_sizes=np.linspace(0.1, 1.0, 100),
+                                                                return_times=True)
         fig,ax=plt.subplots(figsize=(8, 6))
+        mean_fit_times[name] = np.mean(fit_times)
+        mean_train_scores[name] = np.mean(train_scores)
         ax.plot(train_sizes, np.mean(train_scores, axis=1), label='Training score')
         ax.plot(train_sizes, np.mean(test_scores, axis=1), label='Cross-validation score')
         ax.legend(loc="best")
         ax.grid(True)
         ax.set_title(f'Learning Curve for {name}')
         ax.set_xlabel('Training examples')
-        ax.set_ylabel('Score')
+        ax.set_ylabel('F1Score')
         figure.append(fig)
 
     for i,j in best_params.items():
@@ -146,21 +152,15 @@ def gridsearch_learning_curves(filename='backup_churn.csv'):
                     if key == 'penalty' or key == 'solver' or key == 'algorithm' or key == 'metric' or key == 'weights':
                         j[key] = value
                     else:
-                        j[key]=round(value,4)
+                        j[key]=round(value,5)
 
-    with open('churn_test_set_scores.txt', 'w') as f:
+    with open('churn_train_test_set_scores.txt', 'w') as f:
         for name,config in models.items():
             test_model = config['model'].set_params(**best_params[name])
             temp = []
             for key,value in best_params[name].items():
                 temp.append(f"{key}={value}")
-            #create a table with columns:MODEl, best parameter, time to train, recall,
-            #use mathplotlib to create a table
-            import time
-            start_time = time.time()
             test_model.fit(X_train,y_train)
-            total_time = time.time()-start_time
-            total_time = round(total_time,3)
             y_pred = test_model.predict(X_test)
             f1 = f1_score(y_test, y_pred,average='weighted')
             f1 = round(f1,3)
@@ -175,12 +175,16 @@ def gridsearch_learning_curves(filename='backup_churn.csv'):
             plt.ylabel("True")
             figure.append(fig)
 
-            print(f"\n\n\nModel: {name},\nBest Parameters: {temp}, \nTime to Train: {total_time}, \nF1_weighted Score: {f1}")
-            f.write(f"\n\n\nModel: {name},\nBest Parameters: {temp}, \nTime to Train: {total_time}, \nF1_weighted Score: {f1}")
-            
+            print(f"\n\n\nModel: {name},\nBest Parameters: {temp}, \nTime to Train: {mean_fit_times[name]},\n Training Score: {mean_train_scores[name]},\nF1_weighted TEST Score: {f1}")
+            f.write(f"\n\n\nModel: {name},\nBest Parameters: {temp}, \nTime to Train: {mean_fit_times[name]}, \nTraining Score: {mean_train_scores[name]}, \nF1_weighted TEST Score: {f1}")
+        f.close()
 
 
 
     import plots_to_pdf
     plots_to_pdf.to_pdf(figure,filename)
 
+if __name__ == "__main__":
+    import datetime
+    filename = datetime.datetime.now().strftime("churn_learning_curves_%Y-%m-%d_%H-%M-%S.pdf")
+    gridsearch_learning_curves(filename=filename)
